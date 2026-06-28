@@ -2,8 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import socket from "../services/socket";
 import API from "../services/api";
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
 function getInitials(name = "") {
   return name
     .split(" ")
@@ -33,8 +31,6 @@ function avatarColor(id = "") {
   return AVATAR_COLORS[idx];
 }
 
-// ── component ─────────────────────────────────────────────────────────────────
-
 export default function Chat() {
   const [message, setMessage]           = useState("");
   const [messages, setMessages]         = useState([]);
@@ -53,18 +49,17 @@ export default function Chat() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const myColor = avatarColor(user._id || "");
 
-  // open search → auto-focus
+ 
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 50);
     else setSearchQuery("");
   }, [searchOpen]);
 
-  // ── socket join ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (user?._id) socket.emit("join", user._id);
   }, [user._id]);
 
-  // ── receive messages + online users ─────────────────────────────────────────
+  
   useEffect(() => {
     const receiveMessage = (data) => {
       const isRelevant =
@@ -74,7 +69,7 @@ export default function Chat() {
 
       if (!isRelevant) return;
 
-      // ✅ Skip echo of our own sent messages — already appended locally
+     
       if (data.sender === user._id) return;
 
       setMessages((prev) => [...prev, data]);
@@ -90,12 +85,11 @@ export default function Chat() {
     };
   }, [selectedUser, user._id]);
 
-  // ── fetch users ──────────────────────────────────────────────────────────────
+
   useEffect(() => {
     API.get("/users").then((r) => setUsers(r.data)).catch(console.error);
   }, []);
 
-  // ── fetch conversation ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!selectedUser) return;
     API.get(`/messages/${user._id}/${selectedUser._id}`)
@@ -103,7 +97,6 @@ export default function Chat() {
       .catch(console.error);
   }, [selectedUser, user._id]);
 
-  // ── fetch last messages (parallel) ──────────────────────────────────────────
   useEffect(() => {
     if (!users.length) return;
     const others = users.filter((u) => u._id !== user._id);
@@ -119,12 +112,11 @@ export default function Chat() {
     ).then((entries) => setLastMessages(Object.fromEntries(entries)));
   }, [users, user._id]);
 
-  // ── auto-scroll ──────────────────────────────────────────────────────────────
+  
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── close profile menu on outside click ──────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
@@ -133,7 +125,6 @@ export default function Chat() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── send ─────────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     if (!message.trim() || !selectedUser) return;
     const newMessage = { sender: user._id, receiver: selectedUser._id, message: message.trim() };
@@ -141,20 +132,16 @@ export default function Chat() {
     try {
       const res = await API.post("/messages", newMessage);
 
-      // Some backends return { message: "sent successfully", data: {...} }
-      // Others return the saved doc directly. Handle both:
       const saved =
-        res.data?.sender ? res.data          // backend returned the doc directly
-        : res.data?.data?.sender ? res.data.data  // backend wrapped it in { data: doc }
+        res.data?.sender ? res.data          
+        : res.data?.data?.sender ? res.data.data  
         : null;
 
       if (saved) {
-        // Backend returned the full saved document
         setMessages((prev) => [...prev, saved]);
         setLastMessages((prev) => ({ ...prev, [selectedUser._id]: saved.message }));
         socket.emit("send_message", saved);
       } else {
-        // Backend only returned a success string — build the message locally
         const localMsg = {
           ...newMessage,
           _id: Date.now().toString(),
@@ -180,7 +167,6 @@ export default function Chat() {
     window.location.href = "/";
   };
 
-  // ── filtered contacts ────────────────────────────────────────────────────────
   const filteredUsers = users
     .filter((u) => u._id !== user._id)
     .filter((u) => {
@@ -190,15 +176,12 @@ export default function Chat() {
 
   const isSelectedOnline = selectedUser && onlineUsers.includes(selectedUser._id);
 
-  // ── render ────────────────────────────────────────────────────────────────────
   return (
     <div style={styles.shell}>
 
-      {/* ══════════════ SIDEBAR ══════════════ */}
       <aside style={styles.sidebar}>
 
-        {/* Header */}
-        <div style={styles.sidebarHeader}>
+\        <div style={styles.sidebarHeader}>
           <span style={styles.sidebarTitle}>Messages</span>
           <button
             style={{
@@ -214,7 +197,6 @@ export default function Chat() {
           </button>
         </div>
 
-        {/* Search bar */}
         {searchOpen && (
           <div style={styles.searchBar}>
             <span style={{ fontSize: 13, color: "#999", flexShrink: 0 }}>🔍</span>
@@ -233,7 +215,6 @@ export default function Chat() {
           </div>
         )}
 
-        {/* Contact list */}
         <div style={styles.chatList}>
           {filteredUsers.length === 0 && (
             <div style={styles.noResults}>
@@ -283,23 +264,19 @@ export default function Chat() {
           })}
         </div>
 
-        {/* ── MY PROFILE FOOTER (replaces top-right 👤 button) ── */}
         <div ref={menuRef} style={styles.profileFooter}>
           <div
             style={styles.profileFooterInner}
             onClick={() => setShowMenu((v) => !v)}
             title="Account"
           >
-            {/* My avatar */}
             <div style={{ position: "relative", flexShrink: 0 }}>
               <div style={{ ...styles.avatar, width: 36, height: 36, fontSize: 13, background: myColor.bg, color: myColor.text }}>
                 {getInitials(user.name || user.username || "Me")}
               </div>
-              {/* always-green dot — it's you, you're online */}
               <span style={{ ...styles.statusDot, background: "#1D9E75" }} />
             </div>
 
-            {/* My name + email */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {user.name || user.username || "Me"}
@@ -309,11 +286,9 @@ export default function Chat() {
               </div>
             </div>
 
-            {/* More options indicator */}
             <span style={{ fontSize: 16, color: "#CCC", flexShrink: 0 }}>⋯</span>
           </div>
 
-          {/* Popup menu — opens upward */}
           {showMenu && (
             <div style={styles.profilePopup}>
               <div style={styles.profilePopupHeader}>
@@ -336,10 +311,8 @@ export default function Chat() {
         </div>
       </aside>
 
-      {/* ══════════════ MAIN WINDOW ══════════════ */}
       <div style={styles.main}>
 
-        {/* Top bar — no profile button here anymore */}
         <div style={styles.topbar}>
           {selectedUser ? (
             <>
@@ -363,7 +336,6 @@ export default function Chat() {
           )}
         </div>
 
-        {/* Messages */}
         <div style={styles.messages}>
           {!selectedUser && (
             <div style={styles.emptyState}>
@@ -398,7 +370,6 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
         <div style={styles.inputBar}>
           <input
             style={styles.msgInput}
@@ -423,7 +394,6 @@ export default function Chat() {
   );
 }
 
-// ── styles ────────────────────────────────────────────────────────────────────
 
 const styles = {
   shell: {
