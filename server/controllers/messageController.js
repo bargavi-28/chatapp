@@ -1,31 +1,22 @@
 const Message = require("../models/Message");
 
-// Save a new message
 const sendMessage = async (req, res) => {
   try {
     const { sender, receiver, message } = req.body;
 
-    const newMessage = new Message({
-      sender,
-      receiver,
-      message,
-    });
+    if (!sender || !receiver || !message) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
-    await newMessage.save();
+    const newMessage = await Message.create({ sender, receiver, message });
 
-    res.status(201).json({
-      message: "Message sent successfully",
-      data: newMessage,
-    });
+    res.status(201).json(newMessage);
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Server Error",
-    });
+    console.error("Send message error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-// Get all messages between two users
 const getMessages = async (req, res) => {
   try {
     const { sender, receiver } = req.params;
@@ -39,14 +30,9 @@ const getMessages = async (req, res) => {
 
     res.status(200).json(messages);
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Server Error",
-    });
+    console.error("Get messages error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-module.exports = {
-  sendMessage,
-  getMessages,
-};
+module.exports = { sendMessage, getMessages };
